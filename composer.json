@@ -1,0 +1,32 @@
+{
+    "name": "rnab/soar",
+    "description": "Manage php docker development environment",
+    "keywords": ["docker"],
+    "license": "MIT",
+    "support": {
+        "issues": "https://gitlab.com/rnab-other/soar/issues",
+        "source": "https://gitlab.com/rnab-other/soar"
+    },
+    "authors": [
+        {
+            "name": "Roy Nilsson",
+            "email": "roy.nilsson@rnab.net"
+        }
+    ],
+    "require": {
+    },
+    "require-dev": {
+    },
+    "bin": [
+        "bin/soar"
+    ],
+    "autoload": {
+    },
+    "extra": {
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
