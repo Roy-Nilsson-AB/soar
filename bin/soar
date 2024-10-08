@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+
+##################################################################################################
+## 
+## FUNCTIONS
+## 
+##################################################################################################
+
+###
+# Display command help
+## 
+function display_help {
+    echo "Soar"
+    echo
+    echo "${YELLOW}Usage:${NC}" >&2
+    echo "  soar COMMAND [options] [arguments]"
+    echo
+    echo "Unknown commands are passed to the docker-compose binary."
+    echo
+    echo "${YELLOW}docker-compose Commands:${NC}"
+    echo "  ${GREEN}soar up${NC}        Start the application"
+    echo "  ${GREEN}soar up -d${NC}     Start the application in the background"
+    echo "  ${GREEN}soar stop${NC}      Stop the application"
+    echo "  ${GREEN}soar restart${NC}   Restart the application"
+    echo "  ${GREEN}soar ps${NC}        Display the status of all containers"
+    echo
+    echo "${YELLOW}Symfony Console Commands:${NC}"
+    echo "  ${GREEN}soar console ...${NC}          Run a console command"
+    echo
+    echo "${YELLOW}Composer Commands:${NC}"
+    echo "  ${GREEN}soar composer ...${NC}                       Run a Composer command"
+    echo
+    echo "${YELLOW}Vendor Bin Commands:${NC}"
+    echo "  ${GREEN}soar bin ...${NC}          Run a vendor bin command"
+    echo
+
+    exit 1
+}
+
+###
+# Execute command
+## 
+function execute_command {
+    # echo $@
+    # Run Docker Compose with the defined arguments...
+    ${DOCKER_COMPOSE[@]} $@
+}
+
+
+##################################################################################################
+## 
+## INIT SCRIPT
+## 
+##################################################################################################
+
+###
+# Verify operating system is supported...
+##
+UNAMEOUT="$(uname -s)"
+case "${UNAMEOUT}" in
+    Linux*)             MACHINE=linux;;
+    Darwin*)            MACHINE=mac;;
+    *)                  MACHINE="UNKNOWN"
+esac
+
+if [ "$MACHINE" == "UNKNOWN" ]; then
+    echo "Unsupported operating system [$(uname -s)]. Laravel Sail supports macOS, Linux, and Windows (WSL2)." >&2
+
+    exit 1
+fi
+
+###
+# Determine if stdout is a terminal...
+##
+if test -t 1; then
+    # Determine if colors are supported...
+    ncolors=$(tput colors)
+
+    if test -n "$ncolors" && test "$ncolors" -ge 8; then
+        BOLD="$(tput bold)"
+        YELLOW="$(tput setaf 3)"
+        GREEN="$(tput setaf 2)"
+        NC="$(tput sgr0)"
+    fi
+fi
+
+###
+# Determine docker compose binary
+##
+if docker compose &> /dev/null; then
+    DOCKER_COMPOSE=(docker compose)
+else
+    DOCKER_COMPOSE=(docker-compose)
+fi
+
+##################################################################################################
+## 
+## ENV VARIABLES
+## 
+##################################################################################################
+export DOCKER_PHP_SERVICE=${DOCKER_PHP_SERVICE:-"php"}
+export DOCKER_DB_SERVICE=${DOCKER_DB_SERVICE:-"db"}
+export DOCKER_WEB_SERVER_SERVICE=${DOCKER_WEB_SERVER_SERVICE:-"nginx"}
+
+
+
+##################################################################################################
+## 
+## DETERMINE COMMAND TO EXECUTE
+## 
+##################################################################################################
+ARGS=()
+if [ $# -eq 0 ] || [ "$1" == "help" ] || [ "$1" == "--help" ]; then
+    display_help
+    
+elif [ "$1" == "composer" ]; then
+    shift 1
+    ARGS+=("exec" "-T" $DOCKER_PHP_SERVICE "./composer")
+
+elif [ "$1" == "console" ]; then
+    shift 1
+    ARGS+=("exec" "-T" $DOCKER_PHP_SERVICE "./bin/console")
+
+elif [ "$1" == "bin" ]; then
+    shift 1
+    ARGS+=("exec" "-T" $DOCKER_PHP_SERVICE "./vendor/bin/$1")
+    shift 1
+
+else
+    ARGS+=()
+fi
+
+# execute the command
+execute_command ${ARGS[@]} $@
+
+exit 0
