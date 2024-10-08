@@ -102,6 +102,8 @@ export DOCKER_PHP_SERVICE=${DOCKER_PHP_SERVICE:-"php"}
 export DOCKER_DB_SERVICE=${DOCKER_DB_SERVICE:-"db"}
 export DOCKER_WEB_SERVER_SERVICE=${DOCKER_WEB_SERVER_SERVICE:-"nginx"}
 
+export USER=${USER:-$UID}
+export GROUP=${GROUP:-$(id -g)}
 
 
 ##################################################################################################
@@ -112,10 +114,10 @@ export DOCKER_WEB_SERVER_SERVICE=${DOCKER_WEB_SERVER_SERVICE:-"nginx"}
 ARGS=()
 if [ $# -eq 0 ] || [ "$1" == "help" ] || [ "$1" == "--help" ]; then
     display_help
-    
+
 elif [ "$1" == "composer" ]; then
     shift 1
-    ARGS+=("exec" "-T" $DOCKER_PHP_SERVICE "./composer")
+    ARGS+=("exec" "-T" $DOCKER_PHP_SERVICE "composer")
 
 elif [ "$1" == "console" ]; then
     shift 1
