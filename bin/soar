@@ -33,19 +33,13 @@ function display_help {
     echo "${YELLOW}Vendor Bin Commands:${NC}"
     echo "  ${GREEN}soar bin ...${NC}          Run a vendor bin command"
     echo
+    echo "${YELLOW}Database Commands:${NC}"
+    echo "  ${GREEN}soar db${NC}          Open database cli client"
+    echo "  ${GREEN}soar db import <dumpfile>${NC}   Import a database dump"
+    echo
 
     exit 1
 }
-
-###
-# Execute command
-## 
-function execute_command {
-    # echo $@
-    # Run Docker Compose with the defined arguments...
-    ${DOCKER_COMPOSE[@]} $@
-}
-
 
 ##################################################################################################
 ## 
@@ -84,20 +78,42 @@ if test -t 1; then
     fi
 fi
 
+##################################################################################################
+## 
+## INIT TOOLS
+## 
+##################################################################################################
+
 ###
 # Determine docker compose binary
 ##
 if docker compose &> /dev/null; then
-    DOCKER_COMPOSE=(docker compose)
+    DOCKER_COMPOSE="docker compose"
 else
-    DOCKER_COMPOSE=(docker-compose)
+    DOCKER_COMPOSE="docker-compose"
 fi
+DOCKER_COMPOSE_EXEC="$DOCKER_COMPOSE exec"
+
+###
+# Determine pv binary (optional)
+##
+PV_BIN=`which pv`
 
 ##################################################################################################
 ## 
 ## ENV VARIABLES
 ## 
 ##################################################################################################
+
+###
+# Source the .env file
+##
+if [ -n "$APP_ENV" ] && [ -f ./.env."$APP_ENV" ]; then
+  source ./.env."$APP_ENV";
+elif [ -f ./.env ]; then
+  source ./.env;
+fi
+
 export DOCKER_PHP_SERVICE=${DOCKER_PHP_SERVICE:-"php"}
 export DOCKER_DB_SERVICE=${DOCKER_DB_SERVICE:-"db"}
 export DOCKER_WEB_SERVER_SERVICE=${DOCKER_WEB_SERVER_SERVICE:-"nginx"}
@@ -111,28 +127,40 @@ export GROUP=${GROUP:-$(id -g)}
 ## DETERMINE COMMAND TO EXECUTE
 ## 
 ##################################################################################################
-ARGS=()
 if [ $# -eq 0 ] || [ "$1" == "help" ] || [ "$1" == "--help" ]; then
     display_help
 
 elif [ "$1" == "composer" ]; then
     shift 1
-    ARGS+=("exec" "-T" $DOCKER_PHP_SERVICE "composer")
+    $DOCKER_COMPOSE_EXEC -T $DOCKER_PHP_SERVICE composer $@
 
 elif [ "$1" == "console" ]; then
     shift 1
-    ARGS+=("exec" "-T" $DOCKER_PHP_SERVICE "./bin/console")
+    $DOCKER_COMPOSE_EXEC -T $DOCKER_PHP_SERVICE ./bin/console $@
 
 elif [ "$1" == "bin" ]; then
+    VENDOR_BIN=$2
+    shift 2
+    $DOCKER_COMPOSE_EXEC -T $DOCKER_PHP_SERVICE ./vendor/bin/$VENDOR_BIN $@
+
+elif [ "$1" == "db" ] && [ "$2" == "import" ]; then
+    DUMPFILE=$3
+    shift 3
+    COMMAND="$DOCKER_COMPOSE_EXEC -T $DOCKER_DB_SERVICE mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE $@"
+    # echo $COMMAND
+
+    if [ "$PV_BIN" != "" ]; then
+        pv --progress $DUMPFILE | zcat | $COMMAND
+    else
+        zcat $DUMPFILE | $COMMAND
+    fi
+
+elif [ "$1" == "db" ]; then
     shift 1
-    ARGS+=("exec" "-T" $DOCKER_PHP_SERVICE "./vendor/bin/$1")
-    shift 1
+    $DOCKER_COMPOSE_EXEC -it $DOCKER_DB_SERVICE mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE $@
 
 else
-    ARGS+=()
+    $DOCKER_COMPOSE $@
 fi
-
-# execute the command
-execute_command ${ARGS[@]} $@
 
 exit 0
