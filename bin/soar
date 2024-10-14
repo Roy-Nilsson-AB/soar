@@ -160,10 +160,15 @@ elif [ "$1" == "db" ] && [ "$2" == "import" ]; then
     DUMPFILE=$3
     shift 3
     COMMAND="$DOCKER_COMPOSE_EXEC -T $DOCKER_DB_SERVICE mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE $@"
-    if [ "$PV_BIN" != "" ]; then
-        pv --progress $DUMPFILE | zcat | $COMMAND
+    if [[ "$DUMPFILE" =~ *.gz ]]; then
+        CAT_BIN=zcat
     else
-        zcat $DUMPFILE | $COMMAND
+        CAT_BIN=cat
+    fi
+    if [ "$PV_BIN" != "" ]; then
+        pv --progress $DUMPFILE | $CAT_BIN | $COMMAND
+    else
+        $CAT_BIN $DUMPFILE | $COMMAND
     fi
 
 elif [ "$1" == "db" ]; then
@@ -175,7 +180,7 @@ elif [ "$1" == "shell" ]; then
     CONTAINER=${CONTAINER:-$DOCKER_PHP_SERVICE}
     shift 2
     has_bash $CONTAINER
-    if [ "$?" -eq 0 ]; then     
+    if [ "$?" -eq 0 ]; then
         SHELL_COMMAND=bash
     else
         SHELL_COMMAND=sh
