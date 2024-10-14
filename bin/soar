@@ -18,27 +18,40 @@ function display_help {
     echo "Unknown commands are passed to the docker-compose binary."
     echo
     echo "${YELLOW}docker-compose Commands:${NC}"
-    echo "  ${GREEN}soar up${NC}        Start the application"
-    echo "  ${GREEN}soar up -d${NC}     Start the application in the background"
-    echo "  ${GREEN}soar stop${NC}      Stop the application"
-    echo "  ${GREEN}soar restart${NC}   Restart the application"
-    echo "  ${GREEN}soar ps${NC}        Display the status of all containers"
+    echo "  ${GREEN}soar up${NC}               Start the application"
+    echo "  ${GREEN}soar up -d${NC}            Start the application in the background"
+    echo "  ${GREEN}soar stop${NC}             Stop the application"
+    echo "  ${GREEN}soar restart${NC}          Restart the application"
+    echo "  ${GREEN}soar ps${NC}               Display the status of all containers"
     echo
     echo "${YELLOW}Symfony Console Commands:${NC}"
-    echo "  ${GREEN}soar console ...${NC}          Run a console command"
+    echo "  ${GREEN}soar console ...${NC}      Run a console command"
     echo
     echo "${YELLOW}Composer Commands:${NC}"
-    echo "  ${GREEN}soar composer ...${NC}                       Run a Composer command"
+    echo "  ${GREEN}soar composer ...${NC}     Run a Composer command"
     echo
     echo "${YELLOW}Vendor Bin Commands:${NC}"
     echo "  ${GREEN}soar bin ...${NC}          Run a vendor bin command"
     echo
     echo "${YELLOW}Database Commands:${NC}"
-    echo "  ${GREEN}soar db${NC}          Open database cli client"
-    echo "  ${GREEN}soar db import <dumpfile>${NC}   Import a database dump"
+    echo "  ${GREEN}soar db${NC}               Open database cli client"
+    echo "  ${GREEN}soar db import ...${NC}    Import a database dump"
+    echo
+    echo "${YELLOW}Shell Commands:${NC}"
+    echo "  ${GREEN}soar shell ...${NC}        Open bash session in container. Default php"
     echo
 
     exit 1
+}
+
+###
+# Check if bash is available in a container
+## 
+function has_bash {
+    CONTAINER=$1
+    # check if bash is available
+    $DOCKER_COMPOSE_EXEC -T $CONTAINER bash --version >/dev/null
+    return $?
 }
 
 ##################################################################################################
@@ -147,8 +160,6 @@ elif [ "$1" == "db" ] && [ "$2" == "import" ]; then
     DUMPFILE=$3
     shift 3
     COMMAND="$DOCKER_COMPOSE_EXEC -T $DOCKER_DB_SERVICE mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE $@"
-    # echo $COMMAND
-
     if [ "$PV_BIN" != "" ]; then
         pv --progress $DUMPFILE | zcat | $COMMAND
     else
@@ -158,6 +169,18 @@ elif [ "$1" == "db" ] && [ "$2" == "import" ]; then
 elif [ "$1" == "db" ]; then
     shift 1
     $DOCKER_COMPOSE_EXEC -it $DOCKER_DB_SERVICE mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE $@
+
+elif [ "$1" == "shell" ]; then
+    CONTAINER=$2
+    CONTAINER=${CONTAINER:-$DOCKER_PHP_SERVICE}
+    shift 2
+    has_bash $CONTAINER
+    if [ "$?" -eq 0 ]; then     
+        SHELL_COMMAND=bash
+    else
+        SHELL_COMMAND=sh
+    fi
+    $DOCKER_COMPOSE_EXEC -it $CONTAINER $SHELL_COMMAND
 
 else
     $DOCKER_COMPOSE $@
