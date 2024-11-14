@@ -36,6 +36,7 @@ function display_help {
     echo "${YELLOW}Database Commands:${NC}"
     echo "  ${GREEN}soar db${NC}               Open database cli client"
     echo "  ${GREEN}soar db import ...${NC}    Import a database dump"
+    echo "  ${GREEN}soar db dump ...${NC}      Dump a database"
     echo
     echo "${YELLOW}Shell Commands:${NC}"
     echo "  ${GREEN}soar shell ...${NC}        Open bash session in container. Default php"
@@ -170,6 +171,10 @@ elif [ "$1" == "db" ] && [ "$2" == "import" ]; then
     else
         $CAT_BIN $DUMPFILE | $COMMAND
     fi
+
+elif [ "$1" == "db" ] && [ "$2" == "dump" ]; then
+    shift 2
+    $DOCKER_COMPOSE_EXEC -T $DOCKER_DB_SERVICE mysqldump -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE $@
 
 elif [ "$1" == "db" ]; then
     shift 1
