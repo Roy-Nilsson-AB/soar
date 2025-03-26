@@ -27,6 +27,12 @@ function display_help {
     echo "${YELLOW}Symfony Console Commands:${NC}"
     echo "  ${GREEN}soar console ...${NC}      Run a console command"
     echo
+    is_magento
+    if [ "$?" -eq 0 ]; then
+    echo "${YELLOW}Magento Cli Commands:${NC}"
+    echo "  ${GREEN}soar magento ...${NC}      Run a magento command"
+    echo
+    fi
     echo "${YELLOW}Composer Commands:${NC}"
     echo "  ${GREEN}soar composer ...${NC}     Run a Composer command"
     echo
@@ -43,6 +49,15 @@ function display_help {
     echo
 
     exit 1
+}
+
+###
+# Check if this is a magento application
+## 
+function is_magento {
+    # check if bin/magento is available
+    $DOCKER_COMPOSE_EXEC -T $DOCKER_PHP_SERVICE bin/magento -V >/dev/null
+    return $?
 }
 
 ###
@@ -151,6 +166,10 @@ elif [ "$1" == "composer" ]; then
 elif [ "$1" == "console" ]; then
     shift 1
     $DOCKER_COMPOSE_EXEC -T $DOCKER_PHP_SERVICE ./bin/console $@
+
+elif [ "$1" == "magento" ]; then
+    shift 1
+    $DOCKER_COMPOSE_EXEC -T $DOCKER_PHP_SERVICE ./bin/magento $@
 
 elif [ "$1" == "bin" ]; then
     VENDOR_BIN=$2
