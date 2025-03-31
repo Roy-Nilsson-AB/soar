@@ -31,6 +31,8 @@ function display_help {
     if [ "$?" -eq 0 ]; then
     echo "${YELLOW}Magento Cli Commands:${NC}"
     echo "  ${GREEN}soar magento ...${NC}      Run a magento command"
+    echo "  ${GREEN}soar magento install${NC}  Install magento with values from ENV vars"
+    echo "  ${GREEN}soar magento clean${NC}    Clear all magento generated files"
     echo
     fi
     echo "${YELLOW}Composer Commands:${NC}"
@@ -124,6 +126,15 @@ fi
 DOCKER_COMPOSE_EXEC="$DOCKER_COMPOSE exec"
 
 ###
+# Determine user to run commands as
+##
+if [ "$APP_USER" != "" ]; then
+    EXEC_USER="--user=$APP_USER "
+else
+    EXEC_USER=""
+fi
+
+###
 # Determine pv binary (optional)
 ##
 PV_BIN=`which pv`
@@ -150,32 +161,67 @@ export DOCKER_WEB_SERVER_SERVICE=${DOCKER_WEB_SERVER_SERVICE:-"nginx"}
 export USER=${USER:-$UID}
 export GROUP=${GROUP:-$(id -g)}
 
-
 ##################################################################################################
 ## 
 ## DETERMINE COMMAND TO EXECUTE
 ## 
 ##################################################################################################
+
+## HELP
 if [ $# -eq 0 ] || [ "$1" == "help" ] || [ "$1" == "--help" ]; then
     display_help
 
+## COMPOSER
 elif [ "$1" == "composer" ]; then
     shift 1
-    $DOCKER_COMPOSE_EXEC -T $DOCKER_PHP_SERVICE composer $@
+    $DOCKER_COMPOSE_EXEC $EXEC_USER -T $DOCKER_PHP_SERVICE composer $@
 
+## SYMFONY
 elif [ "$1" == "console" ]; then
     shift 1
-    $DOCKER_COMPOSE_EXEC -T $DOCKER_PHP_SERVICE ./bin/console $@
+    $DOCKER_COMPOSE_EXEC $EXEC_USER -T $DOCKER_PHP_SERVICE ./bin/console $@
+
+## MAGENTO
+elif [ "$1" == "magento" ] && [ "$2" == "install" ]; then
+    shift 2
+    $DOCKER_COMPOSE_EXEC $EXEC_USER -T $DOCKER_PHP_SERVICE ./bin/magento setup:install \
+        --db-host=$MYSQL_HOST \
+        --db-name=$MYSQL_DATABASE \
+        --db-user=$MYSQL_USER \
+        --db-password=$MYSQL_PASSWORD \
+        --admin-user=$MAGENTO_ADMIN_USERNAME \
+        --admin-password=$MAGENTO_ADMIN_PASSWORD \
+        --admin-email=$MAGENTO_ADMIN_EMAIL \
+        --admin-firstname=$MAGENTO_ADMIN_FIRSTNAME \
+        --admin-lastname=$MAGENTO_ADMIN_LASTNAME \
+        --search-engine=opensearch \
+        --opensearch-host=$OPENSEARCH_HOST \
+        --opensearch-enable-auth 0 \
+        --backend-frontname=admin
+
+elif [ "$1" == "magento" ] && [ "$2" == "clean" ]; then
+    shift 2
+    $DOCKER_COMPOSE_EXEC $EXEC_USER -T $DOCKER_PHP_SERVICE rm -rf \
+        var/cache/ \
+        var/page_cache/ \
+        var/view_preprocessed \
+        var/di \
+        var/generation \
+        generated \
+        pub/static/frontend/* \
+        pub/static/adminhtml/*
 
 elif [ "$1" == "magento" ]; then
     shift 1
-    $DOCKER_COMPOSE_EXEC -T $DOCKER_PHP_SERVICE ./bin/magento $@
+    $DOCKER_COMPOSE_EXEC $EXEC_USER -T $DOCKER_PHP_SERVICE ./bin/magento $@
 
+## VENDOR BIN
 elif [ "$1" == "bin" ]; then
     VENDOR_BIN=$2
     shift 2
-    $DOCKER_COMPOSE_EXEC -T $DOCKER_PHP_SERVICE ./vendor/bin/$VENDOR_BIN $@
+    $DOCKER_COMPOSE_EXEC $EXEC_USER -T $DOCKER_PHP_SERVICE ./vendor/bin/$VENDOR_BIN $@
 
+## DATABASE
 elif [ "$1" == "db" ] && [ "$2" == "import" ]; then
     DUMPFILE=$3
     shift 3
@@ -199,6 +245,7 @@ elif [ "$1" == "db" ]; then
     shift 1
     $DOCKER_COMPOSE_EXEC -it $DOCKER_DB_SERVICE mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE $@
 
+## SHELL
 elif [ "$1" == "shell" ]; then
     CONTAINER=$2
     CONTAINER=${CONTAINER:-$DOCKER_PHP_SERVICE}
@@ -211,6 +258,7 @@ elif [ "$1" == "shell" ]; then
     fi
     $DOCKER_COMPOSE_EXEC -it $CONTAINER $SHELL_COMMAND
 
+## DOCKER COMPOSE
 else
     $DOCKER_COMPOSE $@
 fi
