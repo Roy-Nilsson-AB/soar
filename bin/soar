@@ -208,8 +208,8 @@ elif [ "$1" == "magento" ] && [ "$2" == "clean" ]; then
         var/di \
         var/generation \
         generated \
-        pub/static/frontend/* \
-        pub/static/adminhtml/*
+        pub/static/frontend/ \
+        pub/static/adminhtml/
 
 elif [ "$1" == "magento" ]; then
     shift 1
@@ -225,7 +225,7 @@ elif [ "$1" == "bin" ]; then
 elif [ "$1" == "db" ] && [ "$2" == "import" ]; then
     DUMPFILE=$3
     shift 3
-    COMMAND="$DOCKER_COMPOSE_EXEC -T $DOCKER_DB_SERVICE mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE $@"
+    COMMAND="$DOCKER_COMPOSE_EXEC -T $DOCKER_DB_SERVICE mysql -uroot -p$MYSQL_ROOT_PASSWORD $MYSQL_DATABASE $@"
     if [[ "$DUMPFILE" =~ *.gz ]]; then
         CAT_BIN=zcat
     else
