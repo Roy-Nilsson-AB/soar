@@ -21,6 +21,7 @@ function display_help {
     echo "  ${GREEN}soar up${NC}               Start the application"
     echo "  ${GREEN}soar up -d${NC}            Start the application in the background"
     echo "  ${GREEN}soar stop${NC}             Stop the application"
+    echo "  ${GREEN}soar stopall${NC}          Stop all applications"
     echo "  ${GREEN}soar restart${NC}          Restart the application"
     echo "  ${GREEN}soar ps${NC}               Display the status of all containers"
     echo
@@ -257,6 +258,10 @@ elif [ "$1" == "shell" ]; then
         SHELL_COMMAND=sh
     fi
     $DOCKER_COMPOSE_EXEC -it $CONTAINER $SHELL_COMMAND
+
+## stopall
+elif [ "$1" == "stopall" ]; then
+    docker stop $(docker ps -a -q)
 
 ## DOCKER COMPOSE
 else
