@@ -22,6 +22,7 @@ function display_help {
     echo "  ${GREEN}soar up -d${NC}            Start the application in the background"
     echo "  ${GREEN}soar stop${NC}             Stop the application"
     echo "  ${GREEN}soar stopall${NC}          Stop all applications"
+    echo "  ${GREEN}soar stopother${NC}        Stop all applications except current project"
     echo "  ${GREEN}soar restart${NC}          Restart the application"
     echo "  ${GREEN}soar ps${NC}               Display the status of all containers"
     echo
@@ -277,6 +278,21 @@ elif [ "$1" == "shell" ]; then
 ## stopall
 elif [ "$1" == "stopall" ]; then
     docker stop $(docker ps -a -q)
+
+## stopother
+elif [ "$1" == "stopother" ]; then
+    # Get current project containers
+    PROJECT_CONTAINERS=$($DOCKER_COMPOSE ps -q)
+    # Get all running containers
+    ALL_CONTAINERS=$(docker ps -q)
+    # Stop containers that are not part of the current project
+    if [ -n "$ALL_CONTAINERS" ]; then
+        for container in $ALL_CONTAINERS; do
+            if ! echo "$PROJECT_CONTAINERS" | grep -q "$container"; then
+                docker stop "$container"
+            fi
+        done
+    fi
 
 ## DOCKER COMPOSE
 else
