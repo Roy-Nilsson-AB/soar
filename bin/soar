@@ -112,6 +112,25 @@ fi
 
 ##################################################################################################
 ## 
+## ENV VARIABLES
+## 
+##################################################################################################
+
+###
+# Source the .env file(s)
+##
+if [ -f ./.env ]; then
+  source ./.env;
+fi
+if [ -n "$APP_ENV" ] && [ -f ./.env."$APP_ENV" ]; then
+  source ./.env."$APP_ENV";
+fi
+
+export USER=${USER:-$UID}
+export GROUP=${GROUP:-$(id -g)}
+
+##################################################################################################
+## 
 ## INIT TOOLS
 ## 
 ##################################################################################################
@@ -140,27 +159,13 @@ fi
 ##
 PV_BIN=`which pv`
 
-##################################################################################################
-## 
-## ENV VARIABLES
-## 
-##################################################################################################
-
 ###
-# Source the .env file
+#
 ##
-if [ -n "$APP_ENV" ] && [ -f ./.env."$APP_ENV" ]; then
-  source ./.env."$APP_ENV";
-elif [ -f ./.env ]; then
-  source ./.env;
-fi
-
 export DOCKER_PHP_SERVICE=${DOCKER_PHP_SERVICE:-"php"}
 export DOCKER_DB_SERVICE=${DOCKER_DB_SERVICE:-"db"}
 export DOCKER_WEB_SERVER_SERVICE=${DOCKER_WEB_SERVER_SERVICE:-"nginx"}
 
-export USER=${USER:-$UID}
-export GROUP=${GROUP:-$(id -g)}
 
 ##################################################################################################
 ## 
